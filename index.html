@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាល - ក្រសួងមហាផ្ទៃ</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🇰🇭</text></svg>">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fef08a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" x2="12" y1="19" y2="22"></line>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាល</div>
+        <div class="brand-subtitle">ក្រសួងមហាផ្ទៃ • ជំនួយការឆ្លាតវៃបំប្លែងសម្លេង និងតាក់តែងកំណត់ហេតុ</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Google AI Studio Configuration Button -->
+      <button class="btn btn-secondary btn-sm" id="btnOpenGeminiModal" style="background: #fef08a; color: #854d0e; font-weight: 700; border: none;">
+        <span>✨</span> Google AI Studio (Gemini)
+      </button>
+
+      <button class="btn btn-secondary btn-sm" id="btnNewMeeting" title="ចាប់ផ្តើមកិច្ចប្រជុំថ្មី">
+        <span>➕</span> កិច្ចប្រជុំថ្មី
+      </button>
+      <button class="btn btn-success btn-sm" id="btnSaveMeeting" title="រក្សាទុកទិន្នន័យកិច្ចប្រជុំ">
+        <span>💾</span> រក្សាទុក
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Three-Column Workspace -->
+  <main class="app-container">
+
+    <!-- Column 1: Audio & Meeting Setup -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🎙️</span> ការគ្រប់គ្រងសម្លេង & ព័ត៌មាន
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+          <button class="tab-btn active" id="tabBtnRecord">ថតសម្លេង</button>
+          <button class="tab-btn" id="tabBtnUpload">ផ្ទុកឯកសារ</button>
+          <button class="tab-btn" id="tabBtnMeta">ព័ត៌មានរដ្ឋបាល</button>
+          <button class="tab-btn" id="tabBtnHistory">ប្រវត្តិប្រជុំ</button>
+        </nav>
+
+        <!-- Tab 1: Live Record -->
+        <div id="tabPaneRecord">
+          <div class="record-box">
+            <span class="status-badge status-idle" id="statusBadge">○ មិនទាន់ចាប់ផ្តើម</span>
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            
+            <canvas id="visualizerCanvas" class="visualizer-canvas" width="300" height="60"></canvas>
+
+            <div class="record-btn-row">
+              <button class="mic-btn" id="btnRecordToggle" title="ចាប់ផ្តើមថតសម្លេង">
+                🎤
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnPauseToggle" style="display: none;">
+                ⏸ ផ្អាក
+              </button>
+            </div>
+            <div style="font-size: 0.8rem; color: #64748b;">
+              ចុចមីក្រូហ្វូនដើម្បីចាប់ផ្តើមថត និងបំប្លែងសម្លេងជាអក្សរផ្ទាល់
+            </div>
+          </div>
+
+          <!-- Mic unavailable banner (hidden by default) -->
+          <div id="micHelpBanner" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; font-size: 0.82rem; color: #991b1b;">
+            <strong>⚠️ មីក្រូហ្វូនកុំព្យូទ័រមិនដំណើរការ?</strong><br>
+            លោកអ្នកអាចប្រើប្រាស់មុខងារ <strong>«ផ្ទុកឯកសារ»</strong> ដើម្បីបំប្លែងសម្លេងដែលថតតាមទូរស័ព្ទដៃ ឬឧបករណ៍ថតសម្លេង ដោយប្រើ <strong>Google AI Studio</strong> បានយ៉ាងរលូន!
+            <div style="margin-top: 0.4rem;">
+              <button class="btn btn-primary btn-sm" id="btnSwitchToUpload" style="padding: 0.2rem 0.5rem; font-size: 0.78rem;">
+                ➡️ ទៅកាន់ផ្ទាំងផ្ទុកឯកសារសម្លេង
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Recording Settings -->
+          <div class="form-group">
+            <label class="form-label">ភាសាសម្រាប់ Speech-to-Text៖</label>
+            <select class="form-select" id="selLanguage">
+              <option value="km-KH" selected>ភាសាខ្មែរ (Khmer - Cambodia)</option>
+              <option value="en-US">English (US)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <label class="form-label" style="margin-bottom: 0;">អ្នកកំពុងនិយាយ (Speaker)៖</label>
+              <button class="btn btn-secondary btn-sm" id="btnAddSpeaker" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;">
+                + បន្ថែមអ្នកនិយាយ
+              </button>
+            </div>
+            <select class="form-select" id="selSpeaker"></select>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label class="form-label">កំណត់ត្រារហ័សពេលកំពុងប្រជុំ (Quick Notes)៖</label>
+            <textarea class="form-textarea" id="txtQuickNotes" rows="3" placeholder="កត់ត្រាចំណាំសំខាន់ៗ ឈ្មោះអ្នកចូលរួម ឬចំណុចគន្លឹះ..."></textarea>
+          </div>
+        </div>
+
+        <!-- Tab 2: Upload Pre-recorded Audio with Google AI Studio -->
+        <div id="tabPaneUpload" style="display: none;">
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.65rem 0.85rem; margin-bottom: 0.85rem; font-size: 0.82rem; color: #1e40af;">
+            💡 <strong>ដំណោះស្រាយល្អបំផុតពេល mic កុំព្យូទ័រខូច៖</strong> លោកអ្នកអាចប្រើទូរស័ព្ទដៃ (Voice Memos ឬ Telegram) ថតសម្លេងក្នុងបន្ទប់ប្រជុំ រួចយកឯកសារនោះមក Upload ទីនេះដើម្បីឱ្យ <strong>Google AI Studio</strong> បំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនភ្លាមៗ!
+          </div>
+
+          <input type="file" id="audioFileInput" accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.webm" style="display: none;">
+          <div id="uploadZone" style="border: 2px dashed #93c5fd; border-radius: 10px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s;">
+            <div style="font-size: 2.2rem; margin-bottom: 0.35rem;">🎙️📁</div>
+            <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.25rem;">ចុច ឬអូសទម្លាក់ឯកសារសម្លេងនៅទីនេះ</div>
+            <div style="font-size: 0.78rem; color: #64748b;">គាំទ្រ .mp3, .m4a, .wav, .aac, .ogg, .webm</div>
+            <div id="selectedFileName" style="margin-top: 0.5rem; font-weight: 600; color: #0284c7; font-size: 0.85rem;"></div>
+          </div>
+
+          <div id="audioPlayerContainer" style="display: none; margin-top: 0.85rem;">
+            <label class="form-label">ចាក់សម្លេងផ្ទៀងផ្ទាត់៖</label>
+            <audio id="audioElement" controls style="width: 100%; border-radius: 8px;"></audio>
+          </div>
+
+          <!-- Google AI Studio Action Button -->
+          <div style="margin-top: 1rem;">
+            <button class="btn btn-primary" id="btnTranscribeWithGemini" style="width: 100%; padding: 0.65rem; font-size: 0.92rem; background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%); border: none; box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3);">
+              <span>✨</span> បំប្លែងសម្លេង & បង្កើតកំណត់ហេតុ (Google AI Studio)
+            </button>
+          </div>
+
+          <!-- AI Progress Box -->
+          <div id="aiProgressBox" style="display: none; margin-top: 0.85rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #166534;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="spinner" style="display: inline-block; width: 16px; height: 16px; border: 2px solid #16a34a; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
+              <strong id="aiProgressText">កំពុងដំណើរការ...</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Administrative Metadata Form -->
+        <div id="tabPaneMeta" style="display: none;">
+          <div class="form-group">
+            <label class="form-label">ក្រសួង/ស្ថាប័ន៖</label>
+            <input type="text" class="form-input" id="inputMinistry" value="ក្រសួងមហាផ្ទៃ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">អគ្គនាយកដ្ឋាន / នាយកដ្ឋាន៖</label>
+            <input type="text" class="form-input" id="inputDept" value="អគ្គនាយកដ្ឋានរដ្ឋបាល">
+          </div>
+          <div class="form-group">
+            <label class="form-label">កម្មវត្ថុ/ចំណងជើងកិច្ចប្រជុំ៖</label>
+            <input type="text" class="form-input" id="inputTitle" value="កំណត់ហេតុនៃកិច្ចប្រជុំការងាររដ្ឋបាល">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <div class="form-group">
+              <label class="form-label">កាលបរិច្ឆេទ៖</label>
+              <input type="text" class="form-input" id="inputDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">ពេលវេលា៖</label>
+              <input type="text" class="form-input" id="inputTime">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ទីកន្លែងប្រជុំ៖</label>
+            <input type="text" class="form-input" id="inputLocation" value="សាលប្រជុំក្រសួងមហាផ្ទៃ (ជាន់ទី២)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">អធិបតីភាពដឹកនាំ៖</label>
+            <input type="text" class="form-input" id="inputChairperson" value="ឯកឧត្តមប្រធានអង្គប្រជុំ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">សមាសភាពចូលរួម៖</label>
+            <input type="text" class="form-input" id="inputAttendees" value="ថ្នាក់ដឹកនាំ និងមន្ត្រីរាជការជំនាញពាក់ព័ន្ធ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">មន្ត្រីកត់ត្រាកំណត់ហេតុ៖</label>
+            <input type="text" class="form-input" id="inputRecorder" value="មន្ត្រីកត់ត្រាកំណត់ហេតុ">
+          </div>
+          <div class="form-group">
+            <label class="form-label">របៀបវារៈប្រជុំ៖</label>
+            <textarea class="form-textarea" id="inputAgenda" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">ការសម្រេច និងទិសដៅ៖</label>
+            <textarea class="form-textarea" id="inputDecisions" rows="2"></textarea>
+          </div>
+        </div>
+
+        <!-- Tab 4: Meeting History -->
+        <div id="tabPaneHistory" style="display: none;">
+          <div id="historyListContainer">
+            <p style="text-align: center; color: #64748b; padding: 1rem;">កំពុងទាញយកបញ្ជី...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Column 2: Live Speech Transcript Stream -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📝</span> អត្ថបទចម្លងពីសម្លេង (Transcript)
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="status-badge" style="background: #e0f2fe; color: #0369a1;" id="transcriptCountBadge">0 ឃ្លា</span>
+          <button class="btn btn-secondary btn-sm" id="btnClearTranscript" title="លុបអត្ថបទទាំងអស់">🗑 លុប</button>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <!-- Live Speech Recognition Interim Preview -->
+        <div id="liveStreamBox" class="live-stream-box" style="display: none;">
+          <div style="font-size: 0.75rem; color: #166534; font-weight: 700; margin-bottom: 0.2rem;">⚡ កំពុងស្តាប់ និងចាប់ពាក្យផ្ទាល់...</div>
+          <div id="liveStreamText" class="live-stream-text"></div>
+        </div>
+
+        <!-- Verbatim Transcript List -->
+        <div id="transcriptList" class="transcript-list"></div>
+      </div>
+    </section>
+
+    <!-- Column 3: Official Administrative Meeting Minutes Sheet -->
+    <section class="panel-card column-minutes">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📜</span> កំណត់ហេតុរដ្ឋបាលផ្លូវការ (Ministry Minutes)
+        </div>
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-sm" id="btnGenerateMinutes" title="បង្កើតកំណត់ហេតុឡើងវិញតាមទម្រង់រដ្ឋបាល">
+            <span>✨</span> បង្កើតកំណត់ហេតុ
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnExportDocx" title="ទាញយកជាឯកសារ Microsoft Word (.docx)">
+            <span>📄</span> Word (.docx)
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnPrintPDF" title="បោះពុម្ព ឬរក្សាទុកជា PDF">
+            <span>🖨️</span> PDF
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnCopyMinutes" title="ចម្លងអត្ថបទកំណត់ហេតុទាំងអស់">
+            <span>📋</span> ចម្លង
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btnDownloadBackup" title="ទាញយក Backup ជាឯកសារ JSON">
+            <span>💾</span> Backup
+          </button>
+        </div>
+      </div>
+
+      <!-- Rich Text Formatting Toolbar -->
+      <div class="editor-toolbar">
+        <button class="tool-btn" onclick="RichEditor.format('bold')" title="អក្សរដិត (Bold)"><strong>B</strong></button>
+        <button class="tool-btn" onclick="RichEditor.format('italic')" title="អក្សរទ្រេត (Italic)"><em>I</em></button>
+        <button class="tool-btn" onclick="RichEditor.format('underline')" title="គូសបន្ទាត់ពីក្រោម (Underline)"><u>U</u></button>
+        <span style="border-right: 1px solid #cbd5e1; height: 20px; margin: 0 4px;"></span>
+        <button class="tool-btn" onclick="RichEditor.format('justifyLeft')" title="តម្រឹមឆ្វេង">⇤</button>
+        <button class="tool-btn" onclick="RichEditor.format('justifyCenter')" title="តម្រឹមកណ្តាល">↔</button>
+        <button class="tool-btn" onclick="RichEditor.format('justifyRight')" title="តម្រឹមស្តាំ">⇥</button>
+        <span style="border-right: 1px solid #cbd5e1; height: 20px; margin: 0 4px;"></span>
+        <button class="tool-btn" onclick="RichEditor.format('insertUnorderedList')" title="ចំណុច (Bullet List)">•≡</button>
+        <button class="tool-btn" onclick="RichEditor.format('insertOrderedList')" title="លេខរៀង (Number List)">1≡</button>
+        <button class="tool-btn" onclick="RichEditor.insertTable(3, 3)" title="បញ្ចូលតារាង">▦</button>
+        <span style="font-size: 0.8rem; color: #64748b; margin-left: auto;">*លោកអ្នកអាចចុចកែសម្រួលផ្ទាល់លើក្រដាសកំណត់ហេតុខាងក្រោមបានភ្លាមៗ</span>
+      </div>
+
+      <div class="panel-body" style="background: #e2e8f0; padding: 1.5rem;">
+        <!-- Authentic Cambodian Official Document Paper Sheet -->
+        <div id="documentSheet" class="document-sheet" contenteditable="true" spellcheck="false"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Google AI Studio Configuration Modal -->
+  <div id="modalGemini" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 0.4rem;">
+          <span>✨</span> ការតភ្ជាប់ជាមួយ Google AI Studio
+        </div>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.88rem; color: #334155; margin-bottom: 0.75rem;">
+          ការភ្ជាប់ជាមួយ <strong>Google AI Studio (Gemini)</strong> អនុញ្ញាតឱ្យលោកអ្នកបំប្លែងឯកសារសម្លេងនៃកិច្ចប្រជុំជាភាសាខ្មែរបានយ៉ាងត្រឹមត្រូវ ១០០% ដោយមិនបាច់ពឹងផ្អែកលើ Mic កុំព្យូទ័រឡើយ។
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Google AI Studio (Gemini) API Key៖</label>
+          <input type="password" class="form-input" id="inputGeminiApiKey" placeholder="AIzaSy...">
+        </div>
+
+        <div style="font-size: 0.82rem; color: #64748b; margin-top: 0.5rem; line-height: 1.5;">
+          * លោកអ្នកអាចទទួលបាន API Key ដោយឥតគិតថ្លៃនៅ៖ 
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #0284c7; font-weight: 600; text-decoration: underline;">
+            https://aistudio.google.com/app/apikey ↗
+          </a><br>
+          * API Key នេះនឹងត្រូវរក្សាទុកក្នុង Google Chrome របស់លោកអ្នកដោយផ្ទាល់ និងមានសុវត្ថិភាពខ្ពស់។
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelGeminiModal">បោះបង់</button>
+        <button class="btn btn-primary" id="btnSaveGeminiApiKey">រក្សាទុក API Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Speaker Rename Modal -->
+  <div id="modalSpeaker" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: #1e3a8a;">ប្តូរឈ្មោះអ្នកនិយាយក្នុងកំណត់ហេតុ</div>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">ឈ្មោះបច្ចុប្បន្ន៖</label>
+          <input type="text" class="form-input" id="inputOldSpeaker" readonly style="background: #f1f5f9;">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ប្តូរទៅជាឈ្មោះ ឬតួនាទីថ្មី៖</label>
+          <input type="text" class="form-input" id="inputNewSpeaker" placeholder="ឧ. ឯកឧត្តម ស សុខា ឬ លោកប្រធាននាយកដ្ឋាន...">
+        </div>
+        <p style="font-size: 0.82rem; color: #64748b; margin-top: 0.5rem;">
+          *ឈ្មោះថ្មីនេះនឹងត្រូវយកទៅជំនួសរាល់ឃ្លានិយាយរបស់អ្នកនិយាយនេះទាំងអស់នៅក្នុងអត្ថបទចម្លង និងកំណត់ហេតុ។
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelSpeakerModal">បោះបង់</button>
+        <button class="btn btn-primary" id="btnConfirmSpeakerRename">យល់ព្រមប្តូរ</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
+  <!-- Scripts (Universal path support: root or js/) -->
+  <script src="js/docx.iife.js" onerror="this.onerror=null;this.src='docx.iife.js'"></script>
+  <script src="js/gemini.js" onerror="this.onerror=null;this.src='gemini.js'"></script>
+  <script src="js/speech.js" onerror="this.onerror=null;this.src='speech.js'"></script>
+  <script src="js/minutes-generator.js" onerror="this.onerror=null;this.src='minutes-generator.js'"></script>
+  <script src="js/editor.js" onerror="this.onerror=null;this.src='editor.js'"></script>
+  <script src="js/export.js" onerror="this.onerror=null;this.src='export.js'"></script>
+  <script src="js/app.js" onerror="this.onerror=null;this.src='app.js'"></script>
+</body>
+</html>
