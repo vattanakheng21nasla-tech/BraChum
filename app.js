@@ -231,11 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
     el.apiKeyTestStatus.textContent = 'កំពុងតភ្ជាប់ទៅកាន់ Google AI Studio...';
 
     try {
-      await GeminiService.testApiKey(key);
+      const activeModel = await GeminiService.testApiKey(key);
       GeminiService.setApiKey(key);
       el.apiKeyTestStatus.style.background = '#f0fdf4';
       el.apiKeyTestStatus.style.color = '#166534';
-      el.apiKeyTestStatus.innerHTML = '✅ <strong>ជោគជ័យ!</strong> API Key នេះត្រឹមត្រូវ និងដំណើរការល្អ ១០០%!';
+      el.apiKeyTestStatus.innerHTML = `✅ <strong>ជោគជ័យ!</strong> API Key នេះត្រឹមត្រូវ និងដំណើរការល្អ ១០០% ជាមួយ Model <strong>${activeModel}</strong>!`;
       el.btnTestGeminiApiKey.disabled = false;
       el.btnTestGeminiApiKey.textContent = '🔍 តេស្តសាកល្បង';
     } catch (err) {

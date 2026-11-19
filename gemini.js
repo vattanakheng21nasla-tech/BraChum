@@ -23,16 +23,46 @@ class GeminiService {
   }
 
   /**
+   * Fetch active models from Google AI Studio (ListModels API)
+   */
+  static async getActiveModels(apiKey) {
+    const defaultModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const available = (data.models || [])
+          .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace('models/', ''));
+        
+        // Put flash models first (2.5-flash, then other flash models)
+        const flash25 = available.filter(m => m.includes('2.5-flash'));
+        const otherFlash = available.filter(m => m.includes('flash') && !m.includes('2.5-flash'));
+        const remaining = available.filter(m => !m.includes('flash'));
+        const sorted = [...flash25, ...otherFlash, ...remaining];
+        if (sorted.length > 0) return sorted;
+      }
+    } catch (e) {
+      console.warn('Could not query ListModels, using defaults:', e);
+    }
+    return defaultModels;
+  }
+
+  /**
    * Test if the provided or stored API Key is active and valid
+   * Auto-detects the active model (e.g. gemini-2.5-flash) from Google AI Studio
    */
   static async testApiKey(apiKey = null) {
     const key = apiKey || this.getApiKey();
     if (!key) throw new Error('សូមបញ្ចូល API Key ជាមុនសិន!');
     
-    // Try gemini-2.5-flash then fallback to gemini-1.5-flash
-    const testModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    // Auto-detect active models from Google AI Studio
+    const models = await this.getActiveModels(key);
     let lastErr = null;
-    for (const m of testModels) {
+    let successModel = null;
+
+    for (const m of models) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
         const response = await fetch(url, {
@@ -42,14 +72,23 @@ class GeminiService {
             contents: [{ parts: [{ text: 'Ping' }] }]
           })
         });
-        if (response.ok) return true;
+        if (response.ok) {
+          successModel = m;
+          localStorage.setItem('brachum_active_model', m);
+          break;
+        }
         const err = await response.json().catch(() => ({}));
-        lastErr = new Error(err.error?.message || `HTTP ${response.status}`);
+        lastErr = new Error(`[${m}] ${err.error?.message || `HTTP ${response.status}`}`);
       } catch (e) {
         lastErr = e;
       }
     }
-    throw lastErr || new Error('មិនអាចភ្ជាប់ទៅកាន់ Google AI Studio បានទេ។');
+
+    if (!successModel) {
+      throw lastErr || new Error('មិនអាចភ្ជាប់ទៅកាន់ Google AI Studio បានទេ។');
+    }
+
+    return successModel;
   }
 
   /**
@@ -160,8 +199,12 @@ class GeminiService {
       }
     };
 
-    // Models to try in order: official gemini-2.5-flash with fallback to gemini-1.5-flash
-    const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    // Auto-detect available models with priority for active model
+    let models = await this.getActiveModels(apiKey);
+    const savedModel = localStorage.getItem('brachum_active_model');
+    if (savedModel && models.includes(savedModel)) {
+      models = [savedModel, ...models.filter(m => m !== savedModel)];
+    }
     let lastError = null;
 
     for (const model of models) {
