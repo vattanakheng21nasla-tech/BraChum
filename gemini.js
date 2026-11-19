@@ -26,7 +26,7 @@ class GeminiService {
    * Fetch active models from Google AI Studio (ListModels API)
    */
   static async getActiveModels(apiKey) {
-    const defaultModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    const defaultModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
       const res = await fetch(url);
@@ -36,11 +36,12 @@ class GeminiService {
           .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace('models/', ''));
         
-        // Put flash models first (2.5-flash, then other flash models)
+        // Put gemini-3.8-flash first, then 2.5-flash, then other flash models
+        const flash38 = available.filter(m => m.includes('3.8-flash'));
         const flash25 = available.filter(m => m.includes('2.5-flash'));
-        const otherFlash = available.filter(m => m.includes('flash') && !m.includes('2.5-flash'));
+        const otherFlash = available.filter(m => m.includes('flash') && !m.includes('3.8-flash') && !m.includes('2.5-flash'));
         const remaining = available.filter(m => !m.includes('flash'));
-        const sorted = [...flash25, ...otherFlash, ...remaining];
+        const sorted = [...flash38, ...flash25, ...otherFlash, ...remaining];
         if (sorted.length > 0) return sorted;
       }
     } catch (e) {
@@ -270,7 +271,8 @@ class GeminiService {
       throw new Error('សូមបញ្ចូល Google AI Studio API Key ជាមុនសិន!');
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const saved = localStorage.getItem('brachum_active_model') || 'gemini-3.8-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${saved}:generateContent?key=${apiKey}`;
     const promptText = `
 អ្នកគឺជាអ្នកជំនាញរដ្ឋបាលជាន់ខ្ពស់នៃក្រសួងមហាផ្ទៃ។
 នេះគឺជាខ្លឹមសារកំណត់ហេតុកិច្ចប្រជុំ៖
