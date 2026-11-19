@@ -107,6 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // History list
     historyListContainer: document.getElementById('historyListContainer'),
 
+    // Mobile & Tablet Navigation
+    mobileViewNav: document.getElementById('mobileViewNav'),
+    mobileTranscriptBadge: document.getElementById('mobileTranscriptBadge'),
+
     // Gemini Modal
     modalGemini: document.getElementById('modalGemini'),
     inputGeminiApiKey: document.getElementById('inputGeminiApiKey'),
@@ -476,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       syncStateToForm();
       el.documentSheet.innerHTML = MinutesGenerator.generateHTML(state.currentMeeting);
+      switchToMobileView('col-minutes');
 
       el.btnTranscribeLiveRecordedAudio.disabled = false;
       el.btnTranscribeLiveRecordedAudio.textContent = '✨ បំប្លែងសម្លេងនេះជាមួយ Google AI Studio';
@@ -533,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       syncStateToForm();
       el.documentSheet.innerHTML = MinutesGenerator.generateHTML(state.currentMeeting);
+      switchToMobileView('col-minutes');
 
       el.aiProgressBox.style.display = 'none';
       el.btnTranscribeWithGemini.disabled = false;
@@ -590,7 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderTranscriptList() {
     el.transcriptList.innerHTML = '';
-    el.transcriptCountBadge.textContent = `${state.currentMeeting.transcript.length} ឃ្លា`;
+    const count = state.currentMeeting.transcript.length;
+    el.transcriptCountBadge.textContent = `${count} ឃ្លា`;
+    if (el.mobileTranscriptBadge) {
+      el.mobileTranscriptBadge.textContent = count;
+    }
 
     if (state.currentMeeting.transcript.length === 0) {
       el.transcriptList.innerHTML = `
@@ -705,6 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
     syncFormToState();
     const html = MinutesGenerator.generateHTML(state.currentMeeting);
     el.documentSheet.innerHTML = html;
+    switchToMobileView('col-minutes');
   });
 
   // Export DOCX (Client-side standalone)
@@ -843,7 +854,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Initialize Mobile & Tablet Navigation View Switcher
+  function initMobileNav() {
+    if (!el.mobileViewNav) return;
+    const navButtons = el.mobileViewNav.querySelectorAll('.mobile-nav-btn');
+    const panels = {
+      'col-controls': document.getElementById('panelControls'),
+      'col-transcript': document.getElementById('panelTranscript'),
+      'col-minutes': document.getElementById('panelMinutes')
+    };
+
+    navButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-target');
+        navButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        Object.keys(panels).forEach(key => {
+          const panel = panels[key];
+          if (!panel) return;
+          if (key === target) {
+            panel.classList.add('mobile-active');
+          } else {
+            panel.classList.remove('mobile-active');
+          }
+        });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  }
+
+  function switchToMobileView(viewKey) {
+    if (!el.mobileViewNav || window.innerWidth >= 1024) return;
+    const btn = el.mobileViewNav.querySelector(`[data-target="${viewKey}"]`);
+    if (btn) btn.click();
+  }
+
   // Initial Setup
+  initMobileNav();
   updateSpeakerDropdown();
   syncStateToForm();
   renderTranscriptList();

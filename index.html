@@ -2,8 +2,8 @@
 <html lang="km">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាល - ក្រសួងមហាផ្ទៃ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BraChum</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🇰🇭</text></svg>">
 </head>
@@ -19,10 +19,7 @@
           <line x1="12" x2="12" y1="19" y2="22"></line>
         </svg>
       </div>
-      <div>
-        <div class="brand-title">ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាល</div>
-        <div class="brand-subtitle">ក្រសួងមហាផ្ទៃ • ជំនួយការឆ្លាតវៃបំប្លែងសម្លេង និងតាក់តែងកំណត់ហេតុ</div>
-      </div>
+      <div class="brand-title" style="font-family: var(--font-head); font-size: 1.5rem; color: #fef08a; letter-spacing: 0.5px; line-height: 1;">BraChum</div>
     </div>
 
     <div class="header-actions">
@@ -40,11 +37,28 @@
     </div>
   </header>
 
+  <!-- Mobile / Tablet Navigation View Switcher (Visible on screens < 1024px) -->
+  <nav class="mobile-view-nav" id="mobileViewNav">
+    <button class="mobile-nav-btn active" data-target="col-controls">
+      <span>🎙️</span>
+      <span class="nav-text">បញ្ជា & ថត/ផ្ទុក</span>
+    </button>
+    <button class="mobile-nav-btn" data-target="col-transcript">
+      <span>📝</span>
+      <span class="nav-text">អត្ថបទចម្លង</span>
+      <span class="mobile-badge" id="mobileTranscriptBadge">0</span>
+    </button>
+    <button class="mobile-nav-btn" data-target="col-minutes">
+      <span>📋</span>
+      <span class="nav-text">សន្លឹកកំណត់ហេតុ</span>
+    </button>
+  </nav>
+
   <!-- Main Three-Column Workspace -->
-  <main class="app-container">
+  <main class="app-container" id="appMainContainer">
 
     <!-- Column 1: Audio & Meeting Setup -->
-    <section class="panel-card">
+    <section class="panel-card col-panel col-controls mobile-active" id="panelControls">
       <div class="panel-header">
         <div class="panel-title">
           <span>🎙️</span> ការគ្រប់គ្រងសម្លេង & ព័ត៌មាន
@@ -224,7 +238,7 @@
     </section>
 
     <!-- Column 2: Live Speech Transcript Stream -->
-    <section class="panel-card">
+    <section class="panel-card col-panel col-transcript" id="panelTranscript">
       <div class="panel-header">
         <div class="panel-title">
           <span>📝</span> អត្ថបទចម្លងពីសម្លេង (Transcript)
@@ -248,7 +262,7 @@
     </section>
 
     <!-- Column 3: Official Administrative Meeting Minutes Sheet -->
-    <section class="panel-card column-minutes">
+    <section class="panel-card column-minutes col-panel col-minutes" id="panelMinutes">
       <div class="panel-header">
         <div class="panel-title">
           <span>📜</span> កំណត់ហេតុរដ្ឋបាលផ្លូវការ (Ministry Minutes)
