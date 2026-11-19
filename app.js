@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Gemini Modal
     modalGemini: document.getElementById('modalGemini'),
     inputGeminiApiKey: document.getElementById('inputGeminiApiKey'),
+    selGeminiModel: document.getElementById('selGeminiModel'),
     btnSaveGeminiApiKey: document.getElementById('btnSaveGeminiApiKey'),
     btnCancelGeminiModal: document.getElementById('btnCancelGeminiModal'),
     btnTestGeminiApiKey: document.getElementById('btnTestGeminiApiKey'),
@@ -185,10 +186,54 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Google AI Studio (Gemini) Modal Actions
-  el.btnOpenGeminiModal.addEventListener('click', () => {
+  el.btnOpenGeminiModal.addEventListener('click', async () => {
     el.inputGeminiApiKey.value = GeminiService.getApiKey();
+    el.apiKeyTestStatus.style.display = 'none';
+
+    // Load model preference
+    const currentPref = GeminiService.getSelectedModel();
+    if (el.selGeminiModel) {
+      el.selGeminiModel.value = currentPref;
+    }
+
     el.modalGemini.classList.add('open');
+
+    // Populate model list if API key exists
+    const key = GeminiService.getApiKey();
+    if (key && el.selGeminiModel) {
+      try {
+        const models = await GeminiService.getActiveModels(key);
+        populateModelDropdown(models, currentPref);
+      } catch (e) {
+        console.warn('Could not load models on modal open:', e);
+      }
+    }
   });
+
+  function populateModelDropdown(models, selectedValue = 'auto') {
+    if (!el.selGeminiModel) return;
+    el.selGeminiModel.innerHTML = `
+      <option value="auto">✨ ស្វ័យប្រវត្តិ (Auto-Adaptive - ជ្រើសរើស Model ថ្មី និងលឿនបំផុត)</option>
+    `;
+    models.forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      let label = m;
+      if (m.includes('3.8-flash')) label += ' (ណែនាំ - ថ្មីបំផុត)';
+      else if (m.includes('flash')) label += ' (លឿន & ពេញនិយម)';
+      opt.textContent = label;
+      el.selGeminiModel.appendChild(opt);
+    });
+    if (selectedValue) {
+      el.selGeminiModel.value = selectedValue;
+    }
+  }
+
+  if (el.selGeminiModel) {
+    el.selGeminiModel.addEventListener('change', () => {
+      GeminiService.setSelectedModel(el.selGeminiModel.value);
+    });
+  }
 
   el.btnCancelGeminiModal.addEventListener('click', () => {
     el.modalGemini.classList.remove('open');
@@ -204,8 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     GeminiService.setApiKey(key);
+    if (el.selGeminiModel) {
+      GeminiService.setSelectedModel(el.selGeminiModel.value);
+    }
     el.modalGemini.classList.remove('open');
-    alert('បានរក្សាទុក Google AI Studio (Gemini) API Key រួចរាល់ដោយជោគជ័យ!');
+    alert('បានរក្សាទុក Google AI Studio API Key និងការកំណត់ Auto បត់បែន Model រួចរាល់ដោយជោគជ័យ!');
   });
 
   // Auto-save API Key on input
@@ -216,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Test API Key button
+  // Test API Key button with Auto-Adaptive Model Detection
   el.btnTestGeminiApiKey.addEventListener('click', async () => {
     const key = el.inputGeminiApiKey.value.trim();
     if (!key) {
@@ -228,19 +276,30 @@ document.addEventListener('DOMContentLoaded', () => {
     el.apiKeyTestStatus.style.display = 'block';
     el.apiKeyTestStatus.style.background = '#eff6ff';
     el.apiKeyTestStatus.style.color = '#1e40af';
-    el.apiKeyTestStatus.textContent = 'កំពុងតភ្ជាប់ទៅកាន់ Google AI Studio...';
+    el.apiKeyTestStatus.textContent = 'កំពុងតភ្ជាប់ និងស្វែងរក Model សកម្មពី Google AI Studio...';
 
     try {
-      const activeModel = await GeminiService.testApiKey(key);
+      const result = await GeminiService.testApiKey(key);
       GeminiService.setApiKey(key);
+      
+      // Update model dropdown with actual models detected
+      populateModelDropdown(result.allModels, GeminiService.getSelectedModel());
+
       el.apiKeyTestStatus.style.background = '#f0fdf4';
       el.apiKeyTestStatus.style.color = '#166534';
-      el.apiKeyTestStatus.innerHTML = `✅ <strong>ជោគជ័យ!</strong> API Key នេះត្រឹមត្រូវ និងដំណើរការល្អ ១០០% ជាមួយ Model <strong>${activeModel}</strong>!`;
+      el.apiKeyTestStatus.style.border = '1px solid #86efac';
+      el.apiKeyTestStatus.innerHTML = `
+        ✅ <strong>ជោគជ័យ!</strong> API Key នេះត្រឹមត្រូវ និងដំណើរការល្អ ១០០% ជាមួយ Model <strong>${result.activeModel}</strong>!
+        <div style="margin-top: 0.35rem; font-size: 0.8rem; color: #15803d; line-height: 1.4;">
+          🔄 <strong>ប្រព័ន្ធ Auto បត់បែន Model សកម្ម៖</strong> បានរកឃើញ Model សរុបចំនួន <strong>${result.allModels.length}</strong> ដែលត្រៀមជាជំនួយការបម្រុងស្វ័យប្រវត្ត (Fallback)។
+        </div>
+      `;
       el.btnTestGeminiApiKey.disabled = false;
       el.btnTestGeminiApiKey.textContent = '🔍 តេស្តសាកល្បង';
     } catch (err) {
       el.apiKeyTestStatus.style.background = '#fef2f2';
       el.apiKeyTestStatus.style.color = '#991b1b';
+      el.apiKeyTestStatus.style.border = '1px solid #fecaca';
       el.apiKeyTestStatus.innerHTML = '❌ <strong>បរាជ័យ៖</strong> ' + err.message;
       el.btnTestGeminiApiKey.disabled = false;
       el.btnTestGeminiApiKey.textContent = '🔍 តេស្តសាកល្បង';
@@ -421,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.btnTranscribeLiveRecordedAudio.disabled = false;
       el.btnTranscribeLiveRecordedAudio.textContent = '✨ បំប្លែងសម្លេងនេះជាមួយ Google AI Studio';
 
-      alert('🎉 ជោគជ័យ! Google AI Studio បានបំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនរួចរាល់!');
+      alert(`🎉 ជោគជ័យ! Google AI Studio [${result.usedModel || 'gemini-3.8-flash'}] បានបំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនរួចរាល់!`);
     } catch (err) {
       console.error(err);
       el.btnTranscribeLiveRecordedAudio.disabled = false;
@@ -478,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.aiProgressBox.style.display = 'none';
       el.btnTranscribeWithGemini.disabled = false;
 
-      alert('🎉 ជោគជ័យ! Google AI Studio បានបំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនរួចរាល់!');
+      alert(`🎉 ជោគជ័យ! Google AI Studio [${result.usedModel || 'gemini-3.8-flash'}] បានបំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនរួចរាល់!`);
     } catch (err) {
       console.error(err);
       el.aiProgressBox.style.display = 'none';

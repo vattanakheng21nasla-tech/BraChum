@@ -317,7 +317,21 @@
           <input type="password" class="form-input" id="inputGeminiApiKey" placeholder="AIzaSy...">
         </div>
 
-        <div id="apiKeyTestStatus" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+        <!-- Auto-Adaptive Model Configuration -->
+        <div class="form-group" style="margin-top: 0.75rem;">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🤖 របៀបជ្រើសរើស Model (Auto បត់បែន)៖</span>
+            <span style="font-size: 0.75rem; color: #166534; font-weight: 600; background: #dcfce7; border: 1px solid #86efac; padding: 2px 7px; border-radius: 4px;">● Auto-Adaptive សកម្ម</span>
+          </label>
+          <select class="form-select" id="selGeminiModel" style="font-weight: 600; color: #1e3a8a;">
+            <option value="auto">✨ ស្វ័យប្រវត្តិ (Auto-Adaptive - ជ្រើសរើស Model ថ្មី និងលឿនបំផុត)</option>
+          </select>
+          <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.3rem; line-height: 1.4;">
+            * ប្រព័ន្ធនឹងស្វែងរក និងជ្រើសរើស Model ថ្មីបំផុត (ដូចជា <strong>gemini-3.8-flash</strong>) ដោយស្វ័យប្រវត្តិ ហើយប្តូរទៅកាន់ Model បម្រុងភ្លាមៗប្រសិនបើមានបញ្ហា។
+          </div>
+        </div>
+
+        <div id="apiKeyTestStatus" style="display: none; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.6rem; line-height: 1.5;"></div>
 
         <div style="font-size: 0.82rem; color: #64748b; margin-top: 0.5rem; line-height: 1.5;">
           * លោកអ្នកអាចទទួលបាន API Key ដោយឥតគិតថ្លៃនៅ៖ 

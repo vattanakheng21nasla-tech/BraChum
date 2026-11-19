@@ -1,10 +1,16 @@
 /**
  * Google AI Studio (Gemini API) Integration
- * Handles audio transcription, Khmer-English processing, and meeting minutes synthesis
+ * Features:
+ * - Dynamic Model Auto-Detection (queries Google ListModels API)
+ * - Intelligent Version Ranking (prefers latest Flash models: 3.8-flash, 2.5-flash, etc.)
+ * - Automatic Cascade Fallback (seamlessly switches if a model fails or is rate-limited)
+ * - Flexible User Selection (Auto-Adaptive or manual override)
  */
 
 class GeminiService {
   static STORAGE_KEY = 'brachum_gemini_api_key';
+  static MODEL_KEY = 'brachum_gemini_model_preference';
+  static ACTIVE_MODEL_KEY = 'brachum_active_model';
 
   static getApiKey() {
     return localStorage.getItem(this.STORAGE_KEY) || '';
@@ -22,11 +28,50 @@ class GeminiService {
     return Boolean(this.getApiKey());
   }
 
+  static getSelectedModel() {
+    return localStorage.getItem(this.MODEL_KEY) || 'auto';
+  }
+
+  static setSelectedModel(model) {
+    if (model) {
+      localStorage.setItem(this.MODEL_KEY, model);
+    } else {
+      localStorage.removeItem(this.MODEL_KEY);
+    }
+  }
+
   /**
-   * Fetch active models from Google AI Studio (ListModels API)
+   * Intelligently sort any list of Gemini models:
+   * 1. Flash models first (optimized for transcription speed & Khmer processing)
+   * 2. Highest version number first (e.g. 3.8 > 2.5 > 1.5)
+   * 3. Pro models next as intelligent fallbacks
+   */
+  static sortModels(modelList) {
+    return [...modelList].sort((a, b) => {
+      const aIsFlash = a.includes('flash');
+      const bIsFlash = b.includes('flash');
+      if (aIsFlash && !bIsFlash) return -1;
+      if (!aIsFlash && bIsFlash) return 1;
+
+      // Extract version number e.g. "3.8", "2.5", "1.5"
+      const extractVer = (name) => {
+        const m = name.match(/(\d+(?:\.\d+)?)/);
+        return m ? parseFloat(m[1]) : 0;
+      };
+      const vA = extractVer(a);
+      const vB = extractVer(b);
+      if (vA !== vB) return vB - vA; // Highest version first!
+
+      return a.localeCompare(b);
+    });
+  }
+
+  /**
+   * Fetch active models dynamically from Google AI Studio (ListModels API)
+   * Completely future-proof: auto-discovers newly released models with zero code changes
    */
   static async getActiveModels(apiKey) {
-    const defaultModels = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
+    const fallbackList = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
       const res = await fetch(url);
@@ -36,34 +81,37 @@ class GeminiService {
           .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace('models/', ''));
         
-        // Put gemini-3.8-flash first, then 2.5-flash, then other flash models
-        const flash38 = available.filter(m => m.includes('3.8-flash'));
-        const flash25 = available.filter(m => m.includes('2.5-flash'));
-        const otherFlash = available.filter(m => m.includes('flash') && !m.includes('3.8-flash') && !m.includes('2.5-flash'));
-        const remaining = available.filter(m => !m.includes('flash'));
-        const sorted = [...flash38, ...flash25, ...otherFlash, ...remaining];
-        if (sorted.length > 0) return sorted;
+        if (available.length > 0) {
+          return this.sortModels(available);
+        }
       }
     } catch (e) {
       console.warn('Could not query ListModels, using defaults:', e);
     }
-    return defaultModels;
+    return fallbackList;
   }
 
   /**
    * Test if the provided or stored API Key is active and valid
-   * Auto-detects the active model (e.g. gemini-2.5-flash) from Google AI Studio
+   * Auto-detects and verifies working models dynamically
    */
   static async testApiKey(apiKey = null) {
     const key = apiKey || this.getApiKey();
     if (!key) throw new Error('សូមបញ្ចូល API Key ជាមុនសិន!');
     
-    // Auto-detect active models from Google AI Studio
+    // Auto-detect all active models for this API Key
     const models = await this.getActiveModels(key);
     let lastErr = null;
-    let successModel = null;
+    let workingModel = null;
 
-    for (const m of models) {
+    // Determine testing order based on user preference or auto-rank
+    const pref = this.getSelectedModel();
+    let testOrder = [...models];
+    if (pref && pref !== 'auto' && testOrder.includes(pref)) {
+      testOrder = [pref, ...testOrder.filter(m => m !== pref)];
+    }
+
+    for (const m of testOrder) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
         const response = await fetch(url, {
@@ -74,8 +122,8 @@ class GeminiService {
           })
         });
         if (response.ok) {
-          successModel = m;
-          localStorage.setItem('brachum_active_model', m);
+          workingModel = m;
+          localStorage.setItem(this.ACTIVE_MODEL_KEY, m);
           break;
         }
         const err = await response.json().catch(() => ({}));
@@ -85,11 +133,14 @@ class GeminiService {
       }
     }
 
-    if (!successModel) {
+    if (!workingModel) {
       throw lastErr || new Error('មិនអាចភ្ជាប់ទៅកាន់ Google AI Studio បានទេ។');
     }
 
-    return successModel;
+    return {
+      activeModel: workingModel,
+      allModels: models
+    };
   }
 
   /**
@@ -109,7 +160,8 @@ class GeminiService {
   }
 
   /**
-   * Transcribe and synthesize meeting from audio file using Google AI Studio (Gemini)
+   * Transcribe and synthesize meeting from audio file using Google AI Studio
+   * Includes Automatic Model Flexibility & Cascade Fallback
    */
   static async transcribeAudioWithGemini(file, onProgress = () => {}) {
     const apiKey = this.getApiKey();
@@ -117,13 +169,14 @@ class GeminiService {
       throw new Error('សូមបញ្ចូល Google AI Studio API Key ជាមុនសិន!');
     }
 
-    if (file.name.toLowerCase().endsWith('.amr')) {
+    // Safety check for unsupported AMR format
+    if (file.name && file.name.toLowerCase().endsWith('.amr')) {
       throw new Error('Google AI Studio មិនគាំទ្រឯកសារសម្លេងប្រភេទ .amr ទេ។ សូមប្តូរការកំណត់ក្នុងទូរស័ព្ទឱ្យថតជា M4A ឬ MP3 (ឬថតតាមកម្មវិធី Voice Memos, Telegram, WhatsApp) រួចសាកល្បងម្តងទៀត។');
     }
 
     onProgress('កំពុងរៀបចំឯកសារសម្លេង (Encoding audio)...');
     const base64Data = await this.fileToBase64(file);
-    let name = file.name.toLowerCase();
+    let name = (file.name || '').toLowerCase();
     let mimeType = file.type || '';
     if (name.endsWith('.m4a') || name.endsWith('.mp4') || mimeType.includes('quicktime') || mimeType.includes('mp4') || mimeType.includes('m4a')) {
       mimeType = 'audio/mp4';
@@ -143,7 +196,7 @@ class GeminiService {
       mimeType = mimeType || 'audio/mp3';
     }
 
-    onProgress('កំពុងបញ្ជូនទៅកាន់ Google AI Studio (Gemini) ដើម្បីបំប្លែងសម្លេងជាអក្សរខ្មែរ...');
+    onProgress('កំពុងស្វែងរក Model ដែលសកម្ម និងលឿនបំផុតពី Google AI Studio...');
 
     const promptText = `
 អ្នកគឺជាអ្នកជំនាញកត់ត្រាកំណត់ហេតុរដ្ឋបាលផ្លូវការ នៃក្រសួងមហាផ្ទៃ (ព្រះរាជាណាចក្រកម្ពុជា)។
@@ -200,16 +253,26 @@ class GeminiService {
       }
     };
 
-    // Auto-detect available models with priority for active model
-    let models = await this.getActiveModels(apiKey);
-    const savedModel = localStorage.getItem('brachum_active_model');
-    if (savedModel && models.includes(savedModel)) {
-      models = [savedModel, ...models.filter(m => m !== savedModel)];
+    // Auto-adaptive model hierarchy with cascade fallback
+    let allModels = await this.getActiveModels(apiKey);
+    const pref = this.getSelectedModel();
+    let models = [...allModels];
+    if (pref && pref !== 'auto' && models.includes(pref)) {
+      models = [pref, ...models.filter(m => m !== pref)];
     }
+
     let lastError = null;
+    let attemptIndex = 0;
 
     for (const model of models) {
+      attemptIndex++;
       try {
+        if (attemptIndex > 1) {
+          onProgress(`🔄 ប្តូរស្វ័យប្រវត្តទៅ Model បម្រុង [${model}] (ម៉ូឌែលទី ${attemptIndex}/${models.length})...`);
+        } else {
+          onProgress(`⚡ កំពុងបំប្លែងសម្លេងជាមួយ [${model}] នៃ Google AI Studio...`);
+        }
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: 'POST',
@@ -220,21 +283,25 @@ class GeminiService {
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error ? errData.error.message : `HTTP ${response.status}`;
-          throw new Error(`[Model ${model}] ${errMsg}`);
+          throw new Error(`[${model}] ${errMsg}`);
         }
 
         const data = await response.json();
-        onProgress('បានទទួលលទ្ធផលពី Google AI Studio! កំពុងរៀបចំទិន្នន័យ...');
+        onProgress(`✅ ជោគជ័យជាមួយ [${model}]! កំពុងរៀបចំកំណត់ហេតុរដ្ឋបាល...`);
 
         const textOutput = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        return this.parseJSONResponse(textOutput);
+        localStorage.setItem(this.ACTIVE_MODEL_KEY, model);
+        return {
+          ...this.parseJSONResponse(textOutput),
+          usedModel: model
+        };
       } catch (err) {
         lastError = err;
-        console.warn(`Failed with model ${model}, trying fallback...`, err);
+        console.warn(`Model ${model} failed, auto-trying next model in fallback chain...`, err);
       }
     }
 
-    throw lastError || new Error('មិនអាចទាក់ទង Google AI Studio បានទេ។');
+    throw lastError || new Error('គ្រប់ Model ទាំងអស់មិនអាចដំណើរការបានទេ។');
   }
 
   /**
@@ -263,7 +330,7 @@ class GeminiService {
   }
 
   /**
-   * Polish or refine minutes with Google AI Studio
+   * Polish or refine minutes with Google AI Studio using auto-adaptive model
    */
   static async polishMinutesWithGemini(minutesHtml, instruction = 'កែសម្រួលពាក្យពេចន៍ឱ្យកាន់តែត្រឹមត្រូវតាមក្បួនរដ្ឋបាល') {
     const apiKey = this.getApiKey();
@@ -271,8 +338,13 @@ class GeminiService {
       throw new Error('សូមបញ្ចូល Google AI Studio API Key ជាមុនសិន!');
     }
 
-    const saved = localStorage.getItem('brachum_active_model') || 'gemini-3.8-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${saved}:generateContent?key=${apiKey}`;
+    const models = await this.getActiveModels(apiKey);
+    const pref = this.getSelectedModel();
+    let targetModel = models[0] || 'gemini-3.8-flash';
+    if (pref && pref !== 'auto' && models.includes(pref)) {
+      targetModel = pref;
+    }
+
     const promptText = `
 អ្នកគឺជាអ្នកជំនាញរដ្ឋបាលជាន់ខ្ពស់នៃក្រសួងមហាផ្ទៃ។
 នេះគឺជាខ្លឹមសារកំណត់ហេតុកិច្ចប្រជុំ៖
@@ -283,27 +355,35 @@ ${minutesHtml}
 សូមកែសម្រួលខ្លឹមសារនេះឡើងវិញដោយរក្សារចនាសម្ព័ន្ធរដ្ឋបាល (ព្រះរាជាណាចក្រកម្ពុជា, ក្រសួងមហាផ្ទៃ, ៥ ផ្នែក) ឱ្យនៅដដែល តែបង្កើនភាពរលូន និងត្រឹមត្រូវនៃភាសារដ្ឋបាល។ បញ្ចេញលទ្ធផលជា HTML សុទ្ធ មិនបាច់ដាក់សញ្ញា \`\`\` ឡើយ។
 `;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }]
-      })
-    });
+    // Try target model first, then fallback to other active models
+    const tryModels = [targetModel, ...models.filter(m => m !== targetModel)];
+    for (const m of tryModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+        if (response.ok) {
+          const data = await response.json();
+          let result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (result.startsWith('```html')) {
+            result = result.replace(/^```html/, '').replace(/```$/, '').trim();
+          } else if (result.startsWith('```')) {
+            result = result.replace(/^```/, '').replace(/```$/, '').trim();
+          }
+          return result;
+        }
+      } catch (e) {
+        console.warn(`Polish failed with ${m}, trying fallback...`, e);
+      }
     }
 
-    const data = await response.json();
-    let result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (result.startsWith('```html')) {
-      result = result.replace(/^```html/, '').replace(/```$/, '').trim();
-    } else if (result.startsWith('```')) {
-      result = result.replace(/^```/, '').replace(/```$/, '').trim();
-    }
-    return result;
+    throw new Error('មិនអាចកែសម្រួលកំណត់ហេតុជាមួយ Google AI Studio បានទេ។');
   }
 }
 
