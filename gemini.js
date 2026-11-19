@@ -23,6 +23,36 @@ class GeminiService {
   }
 
   /**
+   * Test if the provided or stored API Key is active and valid
+   */
+  static async testApiKey(apiKey = null) {
+    const key = apiKey || this.getApiKey();
+    if (!key) throw new Error('សូមបញ្ចូល API Key ជាមុនសិន!');
+    
+    // Try gemini-2.5-flash then fallback to gemini-1.5-flash
+    const testModels = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    let lastErr = null;
+    for (const m of testModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${key}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Ping' }] }]
+          })
+        });
+        if (response.ok) return true;
+        const err = await response.json().catch(() => ({}));
+        lastErr = new Error(err.error?.message || `HTTP ${response.status}`);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('មិនអាចភ្ជាប់ទៅកាន់ Google AI Studio បានទេ។');
+  }
+
+  /**
    * Convert File or Blob to Base64 (without data:...;base64, prefix)
    */
   static fileToBase64(file) {
@@ -47,17 +77,30 @@ class GeminiService {
       throw new Error('សូមបញ្ចូល Google AI Studio API Key ជាមុនសិន!');
     }
 
+    if (file.name.toLowerCase().endsWith('.amr')) {
+      throw new Error('Google AI Studio មិនគាំទ្រឯកសារសម្លេងប្រភេទ .amr ទេ។ សូមប្តូរការកំណត់ក្នុងទូរស័ព្ទឱ្យថតជា M4A ឬ MP3 (ឬថតតាមកម្មវិធី Voice Memos, Telegram, WhatsApp) រួចសាកល្បងម្តងទៀត។');
+    }
+
     onProgress('កំពុងរៀបចំឯកសារសម្លេង (Encoding audio)...');
     const base64Data = await this.fileToBase64(file);
-    let mimeType = file.type || 'audio/mp3';
-    if (mimeType.includes('quicktime') || file.name.endsWith('.m4a')) {
+    let name = file.name.toLowerCase();
+    let mimeType = file.type || '';
+    if (name.endsWith('.m4a') || name.endsWith('.mp4') || mimeType.includes('quicktime') || mimeType.includes('mp4') || mimeType.includes('m4a')) {
       mimeType = 'audio/mp4';
-    } else if (file.name.endsWith('.mp3')) {
+    } else if (name.endsWith('.mp3') || mimeType.includes('mpeg') || mimeType.includes('mp3')) {
       mimeType = 'audio/mp3';
-    } else if (file.name.endsWith('.wav')) {
+    } else if (name.endsWith('.wav') || mimeType.includes('wav')) {
       mimeType = 'audio/wav';
-    } else if (file.name.endsWith('.webm')) {
+    } else if (name.endsWith('.aac') || mimeType.includes('aac')) {
+      mimeType = 'audio/aac';
+    } else if (name.endsWith('.ogg') || name.endsWith('.opus') || mimeType.includes('ogg') || mimeType.includes('opus')) {
+      mimeType = 'audio/ogg';
+    } else if (name.endsWith('.webm') || mimeType.includes('webm')) {
       mimeType = 'audio/webm';
+    } else if (name.endsWith('.flac') || mimeType.includes('flac')) {
+      mimeType = 'audio/flac';
+    } else {
+      mimeType = mimeType || 'audio/mp3';
     }
 
     onProgress('កំពុងបញ្ជូនទៅកាន់ Google AI Studio (Gemini) ដើម្បីបំប្លែងសម្លេងជាអក្សរខ្មែរ...');
@@ -117,8 +160,8 @@ class GeminiService {
       }
     };
 
-    // Try gemini-2.5-flash or gemini-1.5-flash
-    const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+    // Models to try in order: official gemini-2.5-flash with fallback to gemini-1.5-flash
+    const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
     let lastError = null;
 
     for (const model of models) {
@@ -133,7 +176,7 @@ class GeminiService {
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error ? errData.error.message : `HTTP ${response.status}`;
-          throw new Error(`Model ${model}: ${errMsg}`);
+          throw new Error(`[Model ${model}] ${errMsg}`);
         }
 
         const data = await response.json();

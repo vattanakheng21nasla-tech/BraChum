@@ -51,6 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
     txtQuickNotes: document.getElementById('txtQuickNotes'),
     micHelpBanner: document.getElementById('micHelpBanner'),
     btnSwitchToUpload: document.getElementById('btnSwitchToUpload'),
+    recordedAudioBox: document.getElementById('recordedAudioBox'),
+    recordedDurationText: document.getElementById('recordedDurationText'),
+    liveRecordedAudioPlayer: document.getElementById('liveRecordedAudioPlayer'),
+    btnTranscribeLiveRecordedAudio: document.getElementById('btnTranscribeLiveRecordedAudio'),
 
     // Tabs
     tabBtnRecord: document.getElementById('tabBtnRecord'),
@@ -108,6 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
     inputGeminiApiKey: document.getElementById('inputGeminiApiKey'),
     btnSaveGeminiApiKey: document.getElementById('btnSaveGeminiApiKey'),
     btnCancelGeminiModal: document.getElementById('btnCancelGeminiModal'),
+    btnTestGeminiApiKey: document.getElementById('btnTestGeminiApiKey'),
+    apiKeyTestStatus: document.getElementById('apiKeyTestStatus'),
 
     // Speaker Edit Modal
     modalSpeaker: document.getElementById('modalSpeaker'),
@@ -135,6 +141,13 @@ document.addEventListener('DOMContentLoaded', () => {
       el.micHelpBanner.style.display = 'block';
       el.statusBadge.className = 'status-badge status-idle';
       el.statusBadge.innerHTML = '⚠️ Mic មិនដំណើរការ';
+    },
+    onAudioRecorded: (blob, durationSeconds) => {
+      state.lastRecordedAudioBlob = blob;
+      el.recordedAudioBox.style.display = 'block';
+      el.recordedDurationText.textContent = speechEngine.formatTime(durationSeconds);
+      const url = URL.createObjectURL(blob);
+      el.liveRecordedAudioPlayer.src = url;
     },
     onStatusChange: (status) => {
       if (status === 'recording') {
@@ -193,6 +206,45 @@ document.addEventListener('DOMContentLoaded', () => {
     GeminiService.setApiKey(key);
     el.modalGemini.classList.remove('open');
     alert('បានរក្សាទុក Google AI Studio (Gemini) API Key រួចរាល់ដោយជោគជ័យ!');
+  });
+
+  // Auto-save API Key on input
+  el.inputGeminiApiKey.addEventListener('input', () => {
+    const key = el.inputGeminiApiKey.value.trim();
+    if (key) {
+      GeminiService.setApiKey(key);
+    }
+  });
+
+  // Test API Key button
+  el.btnTestGeminiApiKey.addEventListener('click', async () => {
+    const key = el.inputGeminiApiKey.value.trim();
+    if (!key) {
+      alert('សូមបញ្ចូល API Key ជាមុនសិន!');
+      return;
+    }
+    el.btnTestGeminiApiKey.disabled = true;
+    el.btnTestGeminiApiKey.textContent = '⏳ កំពុងតេស្ត...';
+    el.apiKeyTestStatus.style.display = 'block';
+    el.apiKeyTestStatus.style.background = '#eff6ff';
+    el.apiKeyTestStatus.style.color = '#1e40af';
+    el.apiKeyTestStatus.textContent = 'កំពុងតភ្ជាប់ទៅកាន់ Google AI Studio...';
+
+    try {
+      await GeminiService.testApiKey(key);
+      GeminiService.setApiKey(key);
+      el.apiKeyTestStatus.style.background = '#f0fdf4';
+      el.apiKeyTestStatus.style.color = '#166534';
+      el.apiKeyTestStatus.innerHTML = '✅ <strong>ជោគជ័យ!</strong> API Key នេះត្រឹមត្រូវ និងដំណើរការល្អ ១០០%!';
+      el.btnTestGeminiApiKey.disabled = false;
+      el.btnTestGeminiApiKey.textContent = '🔍 តេស្តសាកល្បង';
+    } catch (err) {
+      el.apiKeyTestStatus.style.background = '#fef2f2';
+      el.apiKeyTestStatus.style.color = '#991b1b';
+      el.apiKeyTestStatus.innerHTML = '❌ <strong>បរាជ័យ៖</strong> ' + err.message;
+      el.btnTestGeminiApiKey.disabled = false;
+      el.btnTestGeminiApiKey.textContent = '🔍 តេស្តសាកល្បង';
+    }
   });
 
   // Record Button Click
@@ -302,6 +354,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function handleAudioFileSelected(file) {
+    if (!file) return;
+
+    if (file.name.toLowerCase().endsWith('.amr')) {
+      alert('⚠️ ឯកសារប្រភេទ .amr មិនត្រូវបានគាំទ្រដោយ Google AI Studio (Gemini) ទេ។\n\n💡 ដំណោះស្រាយងាយៗ៖\n១. សូមចូលទៅកាន់កម្មវិធី Voice Recorder ក្នុងទូរស័ព្ទដៃ -> Settings (ការកំណត់) -> Recording format -> ជ្រើសរើសយក "M4A" ឬ "High Quality"\n២. ឬថតជាសារសម្លេងក្នុង Telegram / WhatsApp រួច Save ជាឯកសារ M4A / MP3\n៣. បន្ទាប់មកជ្រើសរើស Upload ឯកសារ M4A/MP3 នោះចូលប្រព័ន្ធម្តងទៀត។');
+      el.audioFileInput.value = '';
+      el.selectedFileName.textContent = '';
+      el.audioPlayerContainer.style.display = 'none';
+      state.selectedAudioFile = null;
+      return;
+    }
+
     state.selectedAudioFile = file;
     el.selectedFileName.textContent = `ឯកសារដែលបានជ្រើស៖ ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
 
@@ -309,6 +372,63 @@ document.addEventListener('DOMContentLoaded', () => {
     el.audioElement.src = objectUrl;
     el.audioPlayerContainer.style.display = 'block';
   }
+
+  // Transcribe Live Recorded Audio with Google AI Studio
+  el.btnTranscribeLiveRecordedAudio.addEventListener('click', async () => {
+    if (!state.lastRecordedAudioBlob) {
+      alert('មិនទាន់មានឯកសារសម្លេងដែលបានថតនៅឡើយទេ!');
+      return;
+    }
+
+    if (!GeminiService.hasApiKey()) {
+      alert('សូមបញ្ចូល Google AI Studio API Key ជាមុនសិន ដើម្បីឱ្យប្រព័ន្ធដំណើរការ!');
+      el.btnOpenGeminiModal.click();
+      return;
+    }
+
+    try {
+      el.btnTranscribeLiveRecordedAudio.disabled = true;
+      el.btnTranscribeLiveRecordedAudio.textContent = '⏳ កំពុងបំប្លែងសម្លេង...';
+
+      const audioFile = new File([state.lastRecordedAudioBlob], 'live-recorded.webm', { type: 'audio/webm' });
+      const result = await GeminiService.transcribeAudioWithGemini(
+        audioFile,
+        (progressMessage) => {
+          el.btnTranscribeLiveRecordedAudio.textContent = progressMessage;
+        }
+      );
+
+      // Populate Transcript
+      if (result.transcript && Array.isArray(result.transcript)) {
+        state.currentMeeting.transcript = result.transcript;
+        renderTranscriptList();
+      }
+
+      // Populate Metadata
+      if (result.title) state.currentMeeting.title = result.title;
+      if (result.chairperson) state.currentMeeting.chairperson = result.chairperson;
+      if (result.attendees) state.currentMeeting.attendees = result.attendees;
+      if (result.agenda) state.currentMeeting.agenda = result.agenda;
+      if (result.proceedingsSummary) state.currentMeeting.quickNotes = result.proceedingsSummary;
+      if (result.decisions) state.currentMeeting.decisions = result.decisions;
+      if (result.actionItems && Array.isArray(result.actionItems)) {
+        state.currentMeeting.actionItems = result.actionItems;
+      }
+
+      syncStateToForm();
+      el.documentSheet.innerHTML = MinutesGenerator.generateHTML(state.currentMeeting);
+
+      el.btnTranscribeLiveRecordedAudio.disabled = false;
+      el.btnTranscribeLiveRecordedAudio.textContent = '✨ បំប្លែងសម្លេងនេះជាមួយ Google AI Studio';
+
+      alert('🎉 ជោគជ័យ! Google AI Studio បានបំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនរួចរាល់!');
+    } catch (err) {
+      console.error(err);
+      el.btnTranscribeLiveRecordedAudio.disabled = false;
+      el.btnTranscribeLiveRecordedAudio.textContent = '✨ បំប្លែងសម្លេងនេះជាមួយ Google AI Studio';
+      alert('មានបញ្ហាក្នុងការបំប្លែងសម្លេងជាមួយ Google AI Studio:\n' + err.message);
+    }
+  });
 
   // Transcribe with Google AI Studio (Gemini) Action
   el.btnTranscribeWithGemini.addEventListener('click', async () => {

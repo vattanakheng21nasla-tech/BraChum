@@ -79,6 +79,17 @@
             <div style="font-size: 0.8rem; color: #64748b;">
               ចុចមីក្រូហ្វូនដើម្បីចាប់ផ្តើមថត និងបំប្លែងសម្លេងជាអក្សរផ្ទាល់
             </div>
+
+            <!-- Live Recorded Audio Actions with Google AI Studio -->
+            <div id="recordedAudioBox" style="display: none; margin-top: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem; text-align: left;">
+              <div style="font-weight: 700; color: #1e40af; font-size: 0.88rem; margin-bottom: 0.4rem;">
+                🎙️ បានថតសម្លេងរួចរាល់ (<span id="recordedDurationText">00:00</span>)
+              </div>
+              <audio id="liveRecordedAudioPlayer" controls style="width: 100%; height: 36px; margin-bottom: 0.5rem; border-radius: 6px;"></audio>
+              <button class="btn btn-primary" id="btnTranscribeLiveRecordedAudio" style="width: 100%; background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%); border: none; font-size: 0.88rem;">
+                ✨ បំប្លែងសម្លេងនេះជាមួយ Google AI Studio
+              </button>
+            </div>
           </div>
 
           <!-- Mic unavailable banner (hidden by default) -->
@@ -123,11 +134,12 @@
             💡 <strong>ដំណោះស្រាយល្អបំផុតពេល mic កុំព្យូទ័រខូច៖</strong> លោកអ្នកអាចប្រើទូរស័ព្ទដៃ (Voice Memos ឬ Telegram) ថតសម្លេងក្នុងបន្ទប់ប្រជុំ រួចយកឯកសារនោះមក Upload ទីនេះដើម្បីឱ្យ <strong>Google AI Studio</strong> បំប្លែងសម្លេងជាអក្សរ និងរៀបចំកំណត់ហេតុរដ្ឋបាលជូនភ្លាមៗ!
           </div>
 
-          <input type="file" id="audioFileInput" accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.webm" style="display: none;">
+          <input type="file" id="audioFileInput" accept=".mp3,.m4a,.wav,.aac,.ogg,.webm,.mp4,audio/mp3,audio/mp4,audio/wav,audio/aac,audio/ogg,audio/webm" style="display: none;">
           <div id="uploadZone" style="border: 2px dashed #93c5fd; border-radius: 10px; padding: 1.5rem 1rem; text-align: center; cursor: pointer; background: #f8fafc; transition: all 0.2s;">
             <div style="font-size: 2.2rem; margin-bottom: 0.35rem;">🎙️📁</div>
             <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.25rem;">ចុច ឬអូសទម្លាក់ឯកសារសម្លេងនៅទីនេះ</div>
-            <div style="font-size: 0.78rem; color: #64748b;">គាំទ្រ .mp3, .m4a, .wav, .aac, .ogg, .webm</div>
+            <div style="font-size: 0.78rem; color: #64748b;">គាំទ្រ៖ .m4a (ទូរស័ព្ទដៃ), .mp3, .wav, .aac, .ogg, .webm</div>
+            <div style="font-size: 0.78rem; color: #dc2626; margin-top: 0.25rem; font-weight: 600;">(⚠️ មិនគាំទ្រឯកសារប្រភេទ .amr ឡើយ)</div>
             <div id="selectedFileName" style="margin-top: 0.5rem; font-weight: 600; color: #0284c7; font-size: 0.85rem;"></div>
           </div>
 
@@ -302,6 +314,8 @@
           <input type="password" class="form-input" id="inputGeminiApiKey" placeholder="AIzaSy...">
         </div>
 
+        <div id="apiKeyTestStatus" style="display: none; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; margin-top: 0.5rem;"></div>
+
         <div style="font-size: 0.82rem; color: #64748b; margin-top: 0.5rem; line-height: 1.5;">
           * លោកអ្នកអាចទទួលបាន API Key ដោយឥតគិតថ្លៃនៅ៖ 
           <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #0284c7; font-weight: 600; text-decoration: underline;">
@@ -312,6 +326,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btnCancelGeminiModal">បោះបង់</button>
+        <button class="btn btn-secondary" id="btnTestGeminiApiKey">🔍 តេស្តសាកល្បង</button>
         <button class="btn btn-primary" id="btnSaveGeminiApiKey">រក្សាទុក API Key</button>
       </div>
     </div>
