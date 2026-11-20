@@ -6,6 +6,13 @@
   <title>BraChum</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🇰🇭</text></svg>">
+  <!-- PWA Manifest & Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BraChum">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
 
@@ -23,6 +30,11 @@
     </div>
 
     <div class="header-actions">
+      <!-- PWA Install Button -->
+      <button class="btn btn-secondary btn-sm" id="btnInstallPwa" style="display: none; background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 700;" title="ដំឡើងកម្មវិធី BraChum លើទូរស័ព្ទ ឬកុំព្យូទ័រ">
+        <span>📲</span> ដំឡើង App
+      </button>
+
       <!-- Google AI Studio Configuration Button -->
       <button class="btn btn-secondary btn-sm" id="btnOpenGeminiModal" style="background: #fef08a; color: #854d0e; font-weight: 700; border: none;">
         <span>✨</span> Google AI Studio (Gemini)
@@ -394,6 +406,12 @@
       to { transform: rotate(360deg); }
     }
   </style>
+
+  <!-- Firebase SDK (Cloud Firestore & Auth) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
 
   <!-- Scripts -->
   <script src="docx.iife.js"></script>

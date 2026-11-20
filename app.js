@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const el = {
     // Header
+    btnInstallPwa: document.getElementById('btnInstallPwa'),
     btnOpenGeminiModal: document.getElementById('btnOpenGeminiModal'),
     btnNewMeeting: document.getElementById('btnNewMeeting'),
     btnSaveMeeting: document.getElementById('btnSaveMeeting'),
@@ -740,33 +741,36 @@ document.addEventListener('DOMContentLoaded', () => {
     DocumentExporter.downloadJSON(state.currentMeeting);
   });
 
-  // Save Meeting to LocalStorage & Server fallback
-  el.btnSaveMeeting.addEventListener('click', () => {
+  // Save Meeting to Firebase Cloud Firestore & LocalStorage
+  el.btnSaveMeeting.addEventListener('click', async () => {
     syncFormToState();
 
-    // Always save in LocalStorage (works on GitHub Pages / Client-side with zero server!)
     try {
-      const savedList = JSON.parse(localStorage.getItem('brachum_meetings') || '[]');
-      const index = savedList.findIndex(m => m.id === state.currentMeeting.id);
-      if (index >= 0) {
-        savedList[index] = state.currentMeeting;
+      if (window.FirebaseService && typeof window.FirebaseService.saveMeeting === 'function') {
+        await window.FirebaseService.saveMeeting(state.currentMeeting);
       } else {
-        savedList.unshift(state.currentMeeting);
+        const savedList = JSON.parse(localStorage.getItem('brachum_meetings') || '[]');
+        const index = savedList.findIndex(m => m.id === state.currentMeeting.id);
+        if (index >= 0) {
+          savedList[index] = state.currentMeeting;
+        } else {
+          savedList.unshift(state.currentMeeting);
+        }
+        localStorage.setItem('brachum_meetings', JSON.stringify(savedList));
       }
-      localStorage.setItem('brachum_meetings', JSON.stringify(savedList));
+
+      // Also notify local server if running
+      fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state.currentMeeting)
+      }).catch(() => {});
+
+      alert('✅ បានរក្សាទុកកិច្ចប្រជុំដោយជោគជ័យ (រក្សាទុកក្នុង Cloud & Offline)!');
     } catch (e) {
-      console.warn('LocalStorage save failed:', e);
+      console.warn('Save error:', e);
+      alert('បានរក្សាទុកក្នុងកុំព្យូទ័រ (LocalStorage) រួចរាល់!');
     }
-
-    // Try server if available
-    fetch('/api/meetings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.currentMeeting)
-    })
-    .catch(() => {});
-
-    alert('បានរក្សាទុកកិច្ចប្រជុំដោយជោគជ័យ!');
   });
 
   // New Meeting
@@ -775,7 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
       state.currentMeeting = {
         id: 'mtg_' + Date.now(),
         title: 'កំណត់ហេតុនៃកិច្ចប្រជុំ',
-        ministry: 'ក្រសួងមហាផ្ទៃ',
+        ministry: 'ក្រសស់មហាផ្ទៃ',
         department: 'អគ្គនាយកដ្ឋានរដ្ឋបាល',
         date: new Date().toLocaleDateString('km-KH'),
         time: new Date().toLocaleTimeString('km-KH', { hour: '2-digit', minute: '2-digit' }),
@@ -799,25 +803,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Load History Meetings from LocalStorage
-  function loadHistoryMeetings() {
-    let meetings = [];
-    try {
-      meetings = JSON.parse(localStorage.getItem('brachum_meetings') || '[]');
-    } catch (e) {
-      meetings = [];
-    }
+  // Load History Meetings from Firebase Cloud Firestore & LocalStorage
+  let unsubscribeMeetingsListener = null;
 
-    if (meetings.length > 0) {
-      renderHistoryList(meetings);
+  function loadHistoryMeetings() {
+    if (window.FirebaseService && typeof window.FirebaseService.onMeetingsChange === 'function') {
+      if (unsubscribeMeetingsListener) unsubscribeMeetingsListener();
+      unsubscribeMeetingsListener = window.FirebaseService.onMeetingsChange((meetings) => {
+        renderHistoryList(meetings);
+      });
     } else {
-      // Try server if available
-      fetch('/api/meetings')
-        .then(res => res.json())
-        .then(srvMeetings => renderHistoryList(srvMeetings))
-        .catch(() => {
-          el.historyListContainer.innerHTML = '<p style="text-align: center; color: #94a3b8; padding: 1.5rem;">មិនទាន់មានកិច្ចប្រជុំដែលបានរក្សាទុកនៅឡើយទេ។</p>';
-        });
+      let meetings = [];
+      try {
+        meetings = JSON.parse(localStorage.getItem('brachum_meetings') || '[]');
+      } catch (e) {
+        meetings = [];
+      }
+      renderHistoryList(meetings);
     }
   }
 
@@ -834,15 +836,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     meetings.forEach(m => {
       const card = document.createElement('div');
-      card.style.cssText = 'background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; cursor: pointer; transition: all 0.2s;';
+      card.style.cssText = 'background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;';
       card.innerHTML = `
-        <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.2rem;">${m.title || 'កិច្ចប្រជុំគ្មានចំណងជើង'}</div>
-        <div style="font-size: 0.78rem; color: #64748b; display: flex; justify-content: space-between;">
-          <span>📅 ${m.date || 'N/A'}</span>
-          <span>📝 ${m.transcript ? m.transcript.length : (m.transcriptCount || 0)} ឃ្លា</span>
+        <div style="flex: 1; cursor: pointer; padding-right: 0.5rem;" class="history-item-click">
+          <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 0.2rem;">${m.title || 'កិច្ចប្រជុំគ្មានចំណងជើង'}</div>
+          <div style="font-size: 0.78rem; color: #64748b; display: flex; gap: 1rem;">
+            <span>📅 ${m.date || 'N/A'}</span>
+            <span>📝 ${m.transcript ? m.transcript.length : (m.transcriptCount || 0)} ឃ្លា</span>
+          </div>
         </div>
+        <button class="btn btn-secondary btn-sm btn-delete-history" title="លុបកិច្ចប្រជុំនេះ" style="color: #ef4444; border-color: #fecaca; padding: 0.25rem 0.5rem;">
+          🗑️
+        </button>
       `;
-      card.addEventListener('click', () => {
+
+      card.querySelector('.history-item-click').addEventListener('click', () => {
         state.currentMeeting = m;
         syncStateToForm();
         renderTranscriptList();
@@ -850,6 +858,20 @@ document.addEventListener('DOMContentLoaded', () => {
         el.tabBtnRecord.click();
         alert(`បានបើកកិច្ចប្រជុំ «${m.title}» រួចរាល់!`);
       });
+
+      card.querySelector('.btn-delete-history').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`តើអ្នកពិតជាចង់លុបកិច្ចប្រជុំ «${m.title}» នេះមែនទេ?`)) {
+          if (window.FirebaseService && typeof window.FirebaseService.deleteMeeting === 'function') {
+            await window.FirebaseService.deleteMeeting(m.id);
+          } else {
+            let list = JSON.parse(localStorage.getItem('brachum_meetings') || '[]').filter(item => item.id !== m.id);
+            localStorage.setItem('brachum_meetings', JSON.stringify(list));
+            renderHistoryList(list);
+          }
+        }
+      });
+
       el.historyListContainer.appendChild(card);
     });
   }
@@ -889,6 +911,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!el.mobileViewNav || window.innerWidth >= 1024) return;
     const btn = el.mobileViewNav.querySelector(`[data-target="${viewKey}"]`);
     if (btn) btn.click();
+  }
+
+  // Register Service Worker for PWA & Offline Support
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('✅ BraChum ServiceWorker registered:', reg.scope))
+        .catch(err => console.warn('ServiceWorker registration error:', err));
+    });
+  }
+
+  // PWA Install Prompt
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (el.btnInstallPwa) {
+      el.btnInstallPwa.style.display = 'inline-flex';
+    }
+  });
+
+  if (el.btnInstallPwa) {
+    el.btnInstallPwa.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the BraChum install prompt');
+          el.btnInstallPwa.style.display = 'none';
+        }
+        deferredPrompt = null;
+      } else {
+        alert('សូមចុចលើប៊ូតុង Install (ដំឡើង) នៅលើរបារស្វែងរកអាសយដ្ឋាន Chrome (Address Bar) ដើម្បីដំឡើង App លើទូរស័ព្ទ ឬកុំព្យូទ័រ!');
+      }
+    });
   }
 
   // Initial Setup
