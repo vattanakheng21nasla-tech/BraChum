@@ -3,7 +3,7 @@
  * Provides offline caching, fast asset loading, and PWA standalone support
  */
 
-const CACHE_NAME = 'brachum-pwa-v1';
+const CACHE_NAME = 'brachum-pwa-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -17,19 +17,20 @@ const STATIC_ASSETS = [
   './export.js',
   './speech.js',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install: Cache Shell Assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('📦 BraChum PWA caching static assets...');
       return cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('Cache addAll warning (some assets may be optional):', err);
+        console.warn('Cache addAll warning:', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 

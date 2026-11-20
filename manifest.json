@@ -1,27 +1,40 @@
 {
-  "name": "BraChum - ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាល",
+  "name": "BraChum",
   "short_name": "BraChum",
-  "description": "ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាលក្រសួងមហាផ្ទៃ និងជំនួយការ AI បំប្លែងសម្លេង (BraChum AI Meeting Assistant)",
+  "description": "ប្រព័ន្ធកត់ត្រាកំណត់ហេតុប្រជុំរដ្ឋបាលក្រសួងមហាផ្ទៃ (BraChum AI Assistant)",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f8fafc",
+  "background_color": "#1e3a8a",
   "theme_color": "#1e3a8a",
   "lang": "km",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["productivity", "government", "utilities"]
+  "categories": ["productivity", "utilities"]
 }
