@@ -927,9 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (el.btnInstallPwa) {
-      el.btnInstallPwa.style.display = 'inline-flex';
-    }
   });
 
   if (el.btnInstallPwa) {
@@ -939,11 +936,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const choiceResult = await deferredPrompt.userChoice;
         if (choiceResult.outcome === 'accepted') {
           console.log('User accepted the BraChum install prompt');
-          el.btnInstallPwa.style.display = 'none';
         }
         deferredPrompt = null;
       } else {
-        alert('សូមចុចលើប៊ូតុង Install (ដំឡើង) នៅលើរបារស្វែងរកអាសយដ្ឋាន Chrome (Address Bar) ដើម្បីដំឡើង App លើទូរស័ព្ទ ឬកុំព្យូទ័រ!');
+        alert('📲 ព័ត៌មានអំពីការដំឡើង BraChum៖\n\n' +
+              '១. លើកុំព្យូទ័រនេះ៖ BraChum កំពុងដំណើរការជាកម្មវិធី App រួចរាល់ជាស្រេច!\n\n' +
+              '២. លើទូរស័ព្ទដៃ Android៖ បើក Link លើ Google Chrome រួចចុចសញ្ញាចុច ៣ (⋮) ➡️ ជ្រើសរើស «ដំឡើងកម្មវិធី / Install app»\n\n' +
+              '៣. លើ iPhone (iOS)៖ បើក Link លើ Safari រួចចុចប៊ូតុង Share (សញ្ញាព្រួញឡើងលើ) ➡️ ជ្រើសរើស «Add to Home Screen»');
       }
     });
   }
